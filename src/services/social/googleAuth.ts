@@ -19,23 +19,32 @@ export interface GoogleAuthResult {
 }
 
 const isConfigured = (): boolean =>
-  Boolean(ENV.GOOGLE_WEB_CLIENT_ID && !ENV.GOOGLE_WEB_CLIENT_ID.startsWith('your-'));
+  Boolean(
+    ENV.GOOGLE_WEB_CLIENT_ID &&
+    !ENV.GOOGLE_WEB_CLIENT_ID.startsWith('your-') &&
+    !ENV.GOOGLE_WEB_CLIENT_ID.startsWith('000000'),
+  );
 
 export const signInWithGoogle = async (): Promise<GoogleAuthResult> => {
   if (!isConfigured()) {
     await mockSocialLogin('google');
-    throw new Error('Not configured');
+    return { token: '', email: '', name: '', photo: null }; // never reached — mockSocialLogin rejects
   }
 
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
   const userInfo = await GoogleSignin.signIn();
+
+  if (userInfo.type !== 'success') {
+    throw new Error('Google sign-in cancelled');
+  }
+
   const tokens = await GoogleSignin.getTokens();
 
   return {
     token: tokens.idToken,
-    email: userInfo.data?.user.email ?? '',
-    name: userInfo.data?.user.name ?? '',
-    photo: userInfo.data?.user.photo ?? null,
+    email: userInfo.data.user.email,
+    name: userInfo.data.user.name ?? '',
+    photo: userInfo.data.user.photo ?? null,
   };
 };
 

@@ -29,7 +29,7 @@ const CATEGORIES = ['All', 'Music', 'Art', 'Sports', 'Tech', 'Food', 'Film'];
 
 const EventListScreen: React.FC<EventListScreenProps> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const { events, isLoading, isRefreshing, isLoadingMore, hasMore, error, fetchEvents, refresh, loadMore } =
+  const { events, isLoading, isRefreshing, isLoadingMore, error, fetchEvents, refresh, loadMore } =
     useEvents();
 
   useEffect(() => {
@@ -159,7 +159,6 @@ const EventListScreen: React.FC<EventListScreenProps> = ({ navigation }) => {
         maxToRenderPerBatch={10}
         windowSize={10}
         initialNumToRender={5}
-        getItemLayout={(_, index) => ({ length: 300, offset: 300 * index, index })}
       />
     </View>
   );

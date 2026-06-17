@@ -18,7 +18,7 @@ export const isAppleAuthAvailable = (): boolean =>
 export const signInWithApple = async (): Promise<AppleAuthResult> => {
   if (!isAppleAuthAvailable()) {
     await mockSocialLogin('apple');
-    throw new Error('Not available');
+    return { token: '', email: null, name: null }; // never reached — mockSocialLogin rejects
   }
 
   const response = await appleAuth.performRequest({

@@ -11,10 +11,7 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { AuthStackParamList } from '../../../types';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../theme';
 import CustomButton from '../../../components/common/CustomButton';
 import CustomInput from '../../../components/common/CustomInput';
@@ -35,11 +32,7 @@ const schema = yup.object({
 
 type FormData = yup.InferType<typeof schema>;
 
-type LoginScreenProps = {
-  navigation: NativeStackNavigationProp<AuthStackParamList, 'Login'>;
-};
-
-const LoginScreen: React.FC<LoginScreenProps> = () => {
+const LoginScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | 'apple' | null>(null);
@@ -93,7 +86,11 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
         const auth = await loginWithSocial({ token, provider, email, name });
         dispatch(setCredentials(auth));
       } catch (error) {
-        showErrorToast(error);
+        // Silently ignore "Not configured" / "Not available" — user already saw the alert
+        const msg = error instanceof Error ? error.message : '';
+        if (msg !== 'Not configured' && msg !== 'Not available' && msg !== 'Google sign-in cancelled') {
+          showErrorToast(error);
+        }
       } finally {
         setSocialLoading(null);
       }

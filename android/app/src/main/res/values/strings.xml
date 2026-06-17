@@ -1,3 +1,9 @@
 <resources>
-    <string name="app_name">PracticalTask</string>
+    <string name="app_name">Plie</string>
+    <!--
+        Facebook SDK requires numeric values to avoid crash on startup.
+        Replace with real values from https://developers.facebook.com
+    -->
+    <string name="facebook_app_id">000000000000000</string>
+    <string name="facebook_client_token">CLIENT_TOKEN_NOT_CONFIGURED</string>
 </resources>

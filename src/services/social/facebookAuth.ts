@@ -16,7 +16,11 @@ interface FacebookUserInfo {
 }
 
 const isConfigured = (): boolean =>
-  Boolean(ENV.FACEBOOK_APP_ID && !ENV.FACEBOOK_APP_ID.startsWith('your-'));
+  Boolean(
+    ENV.FACEBOOK_APP_ID &&
+    !ENV.FACEBOOK_APP_ID.startsWith('your-') &&
+    ENV.FACEBOOK_APP_ID !== '000000000000000',
+  );
 
 const fetchFacebookUserInfo = (accessToken: string): Promise<FacebookUserInfo> =>
   new Promise((resolve, reject) => {
@@ -37,7 +41,7 @@ const fetchFacebookUserInfo = (accessToken: string): Promise<FacebookUserInfo> =
 export const signInWithFacebook = async (): Promise<FacebookAuthResult> => {
   if (!isConfigured()) {
     await mockSocialLogin('facebook');
-    throw new Error('Not configured');
+    return { token: '', email: '', name: '', photo: null }; // never reached — mockSocialLogin rejects
   }
 
   const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
