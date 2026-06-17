@@ -1,45 +1,30 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React from 'react';
+import { StatusBar } from 'react-native';
+import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { store, persistor } from './src/redux/store';
+import AppNavigator from './src/navigation/AppNavigator';
+import Loader from './src/components/common/Loader';
+import { Colors } from './src/theme';
+import { configureGoogleSignIn } from './src/services/social/googleAuth';
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+configureGoogleSignIn();
 
+const App: React.FC = () => {
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
-    </SafeAreaProvider>
+    <Provider store={store}>
+      <PersistGate loading={<Loader visible />} persistor={persistor}>
+        <SafeAreaProvider>
+          <StatusBar barStyle="light-content" backgroundColor={Colors.background} translucent />
+          <AppNavigator />
+          <Toast />
+        </SafeAreaProvider>
+      </PersistGate>
+    </Provider>
   );
-}
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
+};
 
 export default App;
