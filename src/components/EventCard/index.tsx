@@ -6,16 +6,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   Share,
-  Dimensions,
 } from 'react-native';
 import { Event } from '../../types';
-import { Colors, FontSize, FontWeight, BorderRadius, Spacing } from '../../theme';
+import { FontSize, FontWeight, Spacing, BorderRadius } from '../../theme';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { toggleFavorite } from '../../redux/slices/favoritesSlice';
-import { formatDate, formatPrice } from '../../utils';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH - Spacing.base * 2;
 
 interface EventCardProps {
   event: Event;
@@ -23,7 +18,30 @@ interface EventCardProps {
   horizontal?: boolean;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event, onPress, horizontal = false }) => {
+const formatEventDate = (dateStr: string, startTime?: string): string => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const base = `${day}.${month}.${year}`;
+  if (startTime && startTime !== '00:00') {
+    const [h, m] = startTime.split(':');
+    const hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'pm' : 'am';
+    const h12 = hour % 12 || 12;
+    return `${base} @${h12}${m !== '00' ? ':' + m : ''}${ampm}`;
+  }
+  return base;
+};
+
+const formatEventPrice = (price: number | null, isFree: boolean): string => {
+  if (isFree || price === null || price === 0) return 'Free';
+  return `€${price}`;
+};
+
+const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
   const dispatch = useAppDispatch();
   const favorites = useAppSelector(state => state.favorites.favorites);
   const isFavorite = favorites.some(fav => fav.id === event.id);
@@ -36,10 +54,10 @@ const EventCard: React.FC<EventCardProps> = ({ event, onPress, horizontal = fals
     try {
       await Share.share({
         title: event.title,
-        message: `Check out this event: ${event.title} on ${formatDate(event.date)} at ${event.location}`,
+        message: `Check out this event: ${event.title} on ${formatEventDate(event.date)} at ${event.location}`,
       });
     } catch {
-      // Share cancelled or failed
+      // cancelled or failed
     }
   }, [event]);
 
@@ -47,61 +65,67 @@ const EventCard: React.FC<EventCardProps> = ({ event, onPress, horizontal = fals
     onPress(event);
   }, [onPress, event]);
 
+  const displayDate = formatEventDate(event.date, event.startTime);
+  const displayPrice = formatEventPrice(event.price, event.isFree);
+  const visibleTags = event.tags?.slice(0, 4) ?? [];
+
   return (
     <TouchableOpacity
-      activeOpacity={0.9}
+      activeOpacity={0.85}
       onPress={handlePress}
-      style={[styles.card, horizontal ? styles.horizontalCard : styles.verticalCard]}>
-      <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: event.imageUrl }}
-          style={styles.image}
-          resizeMode="cover"
-        />
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText}>{event.category}</Text>
-        </View>
-        <View style={styles.actions}>
-          <TouchableOpacity
-            onPress={handleToggleFavorite}
-            style={styles.actionButton}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={[styles.heartIcon, isFavorite && styles.heartActive]}>
-              {isFavorite ? '♥' : '♡'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleShare}
-            style={[styles.actionButton, styles.shareButton]}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.shareIcon}>⬆</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.priceBadge}>
-          <Text style={styles.priceText}>{formatPrice(event.price, event.isFree)}</Text>
-        </View>
-      </View>
+      style={styles.card}>
+
+      {/* Left: event image */}
+      <Image
+        source={{ uri: event.imageUrl }}
+        style={styles.image}
+        resizeMode="cover"
+      />
+
+      {/* Right: content */}
       <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>
-          {event.title}
-        </Text>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoIcon}>📅</Text>
-          <Text style={styles.infoText} numberOfLines={1}>
-            {formatDate(event.date)}
-          </Text>
+
+        {/* Title row */}
+        <View style={styles.titleRow}>
+          <Text style={styles.title} numberOfLines={1}>{event.title}</Text>
+          <Text style={styles.arrow}>{'→'}</Text>
         </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoIcon}>📍</Text>
-          <Text style={styles.infoText} numberOfLines={1}>
-            {event.location}
-          </Text>
+
+        {/* Date + Location row */}
+        <View style={styles.metaRow}>
+          <Text style={styles.date} numberOfLines={1}>{displayDate}</Text>
+          <Text style={styles.location} numberOfLines={1}>{event.location}</Text>
         </View>
-        <View style={styles.footer}>
-          <View style={styles.attendeesContainer}>
-            <Text style={styles.attendeesText}>👥 {event.attendees} going</Text>
+
+        {/* Price */}
+        <Text style={styles.price}>{displayPrice}</Text>
+
+        {/* Tags + Actions */}
+        <View style={styles.bottomRow}>
+          <View style={styles.tagsContainer}>
+            {visibleTags.map(tag => (
+              <View style={styles.tag} key={tag}>
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={styles.actions}>
+            <TouchableOpacity
+              onPress={handleShare}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={styles.shareIcon}>⬆</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleToggleFavorite}
+              style={styles.heartBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={[styles.heartIcon, isFavorite && styles.heartActive]}>
+                {isFavorite ? '♥' : '♡'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
+
       </View>
     </TouchableOpacity>
   );
@@ -109,124 +133,118 @@ const EventCard: React.FC<EventCardProps> = ({ event, onPress, horizontal = fals
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: BorderRadius.xl,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: Spacing.base,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  verticalCard: {
-    width: CARD_WIDTH,
-  },
-  horizontalCard: {
-    width: 280,
-    marginRight: Spacing.base,
-    marginBottom: 0,
-  },
-  imageContainer: {
-    position: 'relative',
-    height: 180,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  categoryBadge: {
-    position: 'absolute',
-    top: Spacing.sm,
-    left: Spacing.sm,
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xxs,
-  },
-  categoryText: {
-    color: Colors.white,
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.semiBold,
-  },
-  actions: {
-    position: 'absolute',
-    top: Spacing.sm,
-    right: Spacing.sm,
     flexDirection: 'row',
-    gap: Spacing.xs,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    alignItems: 'flex-start',
   },
-  actionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: BorderRadius.full,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shareButton: {
-    marginLeft: Spacing.xs,
-  },
-  heartIcon: {
-    color: Colors.white,
-    fontSize: FontSize.lg,
-  },
-  heartActive: {
-    color: Colors.heartActive,
-  },
-  shareIcon: {
-    color: Colors.white,
-    fontSize: FontSize.md,
-  },
-  priceBadge: {
-    position: 'absolute',
-    bottom: Spacing.sm,
-    right: Spacing.sm,
-    backgroundColor: Colors.secondary,
+
+  // Left image
+  image: {
+    width: 76,
+    height: 76,
     borderRadius: BorderRadius.sm,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xxs,
+    marginRight: Spacing.md,
+    backgroundColor: '#E5E7EB',
   },
-  priceText: {
-    color: Colors.textDark,
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
-  },
+
+  // Content
   content: {
-    padding: Spacing.base,
+    flex: 1,
+    minHeight: 76,
+    justifyContent: 'space-between',
+  },
+
+  // Title row
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 3,
   },
   title: {
-    color: Colors.text,
-    fontSize: FontSize.base,
+    flex: 1,
+    fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
-    marginBottom: Spacing.sm,
-    lineHeight: 22,
+    color: '#111827',
+    lineHeight: 18,
+    paddingRight: Spacing.xs,
   },
-  infoRow: {
+  arrow: {
+    fontSize: FontSize.sm,
+    color: '#9CA3AF',
+    marginTop: 1,
+  },
+
+  // Date + location
+  metaRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
+    marginBottom: 2,
   },
-  infoIcon: {
-    fontSize: FontSize.sm,
-    marginRight: Spacing.xs,
-  },
-  infoText: {
-    color: Colors.textSecondary,
-    fontSize: FontSize.sm,
+  date: {
+    fontSize: FontSize.xs,
+    color: '#4B5563',
     flex: 1,
   },
-  footer: {
+  location: {
+    fontSize: FontSize.xs,
+    color: '#9CA3AF',
+    textAlign: 'right',
+    maxWidth: 110,
+  },
+
+  // Price
+  price: {
+    fontSize: FontSize.xs,
+    color: '#6B7280',
+    marginBottom: 5,
+  },
+
+  // Tags + actions row
+  bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: Spacing.xs,
+    justifyContent: 'space-between',
   },
-  attendeesContainer: {},
-  attendeesText: {
-    color: Colors.textMuted,
-    fontSize: FontSize.xs,
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  tag: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: BorderRadius.xs,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 2,
+    marginRight: 4,
+    marginBottom: 2,
+  },
+  tagText: {
+    fontSize: 9,
+    color: '#6B7280',
+    fontWeight: FontWeight.medium,
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  shareIcon: {
+    fontSize: FontSize.md,
+    color: '#9CA3AF',
+  },
+  heartBtn: {
+    marginLeft: Spacing.sm,
+  },
+  heartIcon: {
+    fontSize: FontSize.lg,
+    color: '#D1D5DB',
+  },
+  heartActive: {
+    color: '#4CAF50',
   },
 });
 
