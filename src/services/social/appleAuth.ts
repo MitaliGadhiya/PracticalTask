@@ -1,9 +1,10 @@
 import { Platform } from 'react-native';
 import appleAuth, {
-  AppleAuthRequestOperation,
-  AppleAuthRequestScope,
-  AppleAuthCredentialState,
+  AppleRequestOperation,
+  AppleRequestScope,
+  AppleCredentialState,
 } from '@invertase/react-native-apple-authentication';
+import { mockSocialLogin } from './mockAuth';
 
 export interface AppleAuthResult {
   token: string;
@@ -11,44 +12,44 @@ export interface AppleAuthResult {
   name: string | null;
 }
 
-export const isAppleAuthAvailable = (): boolean => {
-  return Platform.OS === 'ios' && appleAuth.isSupported;
-};
+export const isAppleAuthAvailable = (): boolean =>
+  Platform.OS === 'ios' && appleAuth.isSupported;
 
 export const signInWithApple = async (): Promise<AppleAuthResult> => {
   if (!isAppleAuthAvailable()) {
-    throw new Error('Apple Sign-In is not available on this device');
+    const mock = await mockSocialLogin('apple');
+    return { token: mock.token, email: mock.email, name: mock.name };
   }
 
-  const appleAuthRequestResponse = await appleAuth.performRequest({
-    requestedOperation: AppleAuthRequestOperation.LOGIN,
-    requestedScopes: [AppleAuthRequestScope.EMAIL, AppleAuthRequestScope.FULL_NAME],
-  });
+  try {
+    const response = await appleAuth.performRequest({
+      requestedOperation: AppleRequestOperation.LOGIN,
+      requestedScopes: [AppleRequestScope.EMAIL, AppleRequestScope.FULL_NAME],
+    });
 
-  const { identityToken, email, fullName } = appleAuthRequestResponse;
+    const { identityToken, email, fullName } = response;
+    if (!identityToken) throw new Error('Apple Sign-In failed: No identity token received');
 
-  if (!identityToken) {
-    throw new Error('Apple Sign-In failed: No identity token received');
+    const credentialState = await appleAuth.getCredentialStateForUser(response.user);
+    if (credentialState !== AppleCredentialState.AUTHORIZED) {
+      throw new Error('Apple credential is not authorized');
+    }
+
+    const name =
+      fullName?.givenName && fullName?.familyName
+        ? `${fullName.givenName} ${fullName.familyName}`
+        : fullName?.givenName ?? null;
+
+    return { token: identityToken, email, name };
+  } catch (error: unknown) {
+    const msg = (error as Error)?.message ?? '';
+    if (msg.includes('cancelled') || msg.includes('cancel')) throw error;
+    if (__DEV__) {
+      const mock = await mockSocialLogin('apple');
+      return { token: mock.token, email: mock.email, name: mock.name };
+    }
+    throw error;
   }
-
-  const credentialState = await appleAuth.getCredentialStateForUser(
-    appleAuthRequestResponse.user,
-  );
-
-  if (credentialState !== AppleAuthCredentialState.AUTHORIZED) {
-    throw new Error('Apple credential is not authorized');
-  }
-
-  const name =
-    fullName?.givenName && fullName?.familyName
-      ? `${fullName.givenName} ${fullName.familyName}`
-      : fullName?.givenName ?? null;
-
-  return {
-    token: identityToken,
-    email,
-    name,
-  };
 };
 
-export { AppleAuthCredentialState };
+export { AppleCredentialState };

@@ -59,7 +59,7 @@ export const normalizeEvent = (raw: RawEvent): Event => ({
   imageUrl: raw.image ?? raw.image_url ?? raw.imageUrl ?? raw.thumbnail ?? '',
   category: raw.category ?? raw.type ?? 'General',
   price: raw.price != null ? Number(raw.price) : null,
-  isFree: raw.is_free ?? raw.isFree ?? raw.price == null || raw.price === 0,
+  isFree: raw.is_free != null ? Boolean(raw.is_free) : raw.isFree != null ? Boolean(raw.isFree) : raw.price == null || Number(raw.price) === 0,
   organizer: {
     id: String(raw.organizer?.id ?? raw.organizer_id ?? ''),
     name: raw.organizer?.name ?? raw.organizer_name ?? 'Unknown',
