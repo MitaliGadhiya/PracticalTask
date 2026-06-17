@@ -1,7 +1,4 @@
-import {
-  GoogleSignin,
-  statusCodes,
-} from '@react-native-google-signin/google-signin';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { ENV } from '../../config/env';
 import { mockSocialLogin } from './mockAuth';
 
@@ -26,32 +23,20 @@ const isConfigured = (): boolean =>
 
 export const signInWithGoogle = async (): Promise<GoogleAuthResult> => {
   if (!isConfigured()) {
-    const mock = await mockSocialLogin('google');
-    return { ...mock, photo: null };
+    await mockSocialLogin('google');
+    throw new Error('Not configured');
   }
 
-  try {
-    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-    const userInfo = await GoogleSignin.signIn();
-    const tokens = await GoogleSignin.getTokens();
-    return {
-      token: tokens.idToken,
-      email: userInfo.data?.user.email ?? '',
-      name: userInfo.data?.user.name ?? '',
-      photo: userInfo.data?.user.photo ?? null,
-    };
-  } catch (error: unknown) {
-    const code = (error as { code?: string })?.code;
-    if (code === statusCodes.SIGN_IN_CANCELLED) {
-      throw new Error('Google sign-in was cancelled');
-    }
-    // SDK not configured / play services issue — fall back to mock in dev
-    if (__DEV__) {
-      const mock = await mockSocialLogin('google');
-      return { ...mock, photo: null };
-    }
-    throw error;
-  }
+  await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+  const userInfo = await GoogleSignin.signIn();
+  const tokens = await GoogleSignin.getTokens();
+
+  return {
+    token: tokens.idToken,
+    email: userInfo.data?.user.email ?? '',
+    name: userInfo.data?.user.name ?? '',
+    photo: userInfo.data?.user.photo ?? null,
+  };
 };
 
 export const signOutGoogle = async (): Promise<void> => {
